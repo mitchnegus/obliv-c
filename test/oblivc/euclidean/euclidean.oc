@@ -1,0 +1,19 @@
+#include<stdio.h>
+#include<math.h>
+#include<obliv.oh>
+
+#include"euclidean.h"
+
+void euclideanDistance(void* args) {
+  protocolIO *io = args;
+  int x1, y1, x2, y2;
+  obliv int res=0;
+
+  x1 = ocBroadcastInt(io->x ,1);
+  y1 = ocBroadcastInt(io->y ,1);
+  x2 = ocBroadcastInt(io->x ,2);
+  y2 = ocBroadcastInt(io->y ,2);
+
+  res = pow(x1-x2, 2) + pow(y1-y2, 2);
+  revealOblivInt(&io->res, res, 0);
+}
