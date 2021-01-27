@@ -1,19 +1,73 @@
-#include<stdio.h>
-#include<math.h>
-#include<obliv.oh>
+#include <stdio.h>
+#include <math.h>
+#include <obliv.oh>
 
-#include"euclidean.h"
+#include "dbg.h"
+#include "euclidean.h"
+
+
+void toObliv(protocolIO *io, obliv int *ox, int *x, int party) {
+  for (int i=0; i < io->n; i++)
+    ox[i] = feedOblivInt(x[i], party);
+}
+
+
+obliv int osqr(obliv int x) {
+  return x*x;
+}
+
+
+obliv int eucDistance(obliv int *ox1, obliv int *ox2, int n) {
+  obliv int odist = 0;
+  for (int i = 0; i < n; i++)
+    odist += osqr(ox1[i]-ox2[i]);
+  return odist;
+}
+
+
+void evaluate_distance(protocolIO *io, obliv int *ox1,
+                       obliv int *ox2, obliv int osd) {
+  int n = io->n;
+  obliv int odist = eucDistance(ox1, ox2, n);
+
+  revealOblivInt(&io->dist, odist, 0);
+}
+
+
+void check_input_count(protocolIO *io) {
+  int nx = ocBroadcastInt(io->n, 1);
+  int ny = ocBroadcastInt(io->n, 2);
+
+  if (nx != ny) {
+    log_err("The number of data points given by each party must be the same");
+    clean_errno();
+    exit(1);
+  }
+}
+
 
 void euclideanDistance(void* args) {
   protocolIO *io = args;
-  int x1, y1, x2, y2;
-  obliv int res=0;
 
-  x1 = ocBroadcastInt(io->x ,1);
-  y1 = ocBroadcastInt(io->y ,1);
-  x2 = ocBroadcastInt(io->x ,2);
-  y2 = ocBroadcastInt(io->y ,2);
+  // Define vectors for the two party inputs
+  int *x1 = malloc(sizeof(obliv int) * ALLOC);
+  int *x2 = malloc(sizeof(obliv int) * ALLOC);
 
-  res = pow(x1-x2, 2) + pow(y1-y2, 2);
-  revealOblivInt(&io->res, res, 0);
+  // Results (the squared distance)
+  obliv int osd = 0;
+
+  load_data(io, &x1, &x2, ocCurrentParty());
+  check_input_count(io);
+
+  // Store data obliviously
+  obliv int *ox1 = malloc(sizeof(obliv int) * io->n);
+  obliv int *ox2 = malloc(sizeof(obliv int) * io->n);
+  toObliv(io, ox1, x1, 1);
+  toObliv(io, ox2, x2, 2);
+  free(x1);
+  free(x2);
+
+  evaluate_distance(io, ox1, ox2, osd);
+  free(ox1);
+  free(ox2);
 }
